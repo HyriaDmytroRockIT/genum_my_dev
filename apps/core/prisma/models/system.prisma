@@ -1,0 +1,6 @@
+model SystemConfig {
+    id        Int      @id @default(autoincrement())
+    key       String   @unique @db.VarChar(255)
+    value     String   @db.VarChar(255)
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+}

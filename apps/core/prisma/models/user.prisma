@@ -1,0 +1,44 @@
+model User {
+    id        Int      @id @default(autoincrement())
+    email     String   @unique
+    name      String
+    authID    String
+    picture   String?
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+    updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    organizationMemberships OrganizationMember[]
+    projectMemberships      ProjectMember[]
+    commits                 PromptVersion[]
+    projectApiKeys          ProjectApiKey[]
+    promptChats             PromptChat[]
+    notificationReads       NotificationRead[]
+    userCredentials         UserCredential[]
+    userSessions            UserSession[]
+}
+
+model UserCredential {
+    id     Int  @id @default(autoincrement())
+    userId Int
+    user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    passwordHash String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([userId])
+}
+
+model UserSession {
+    id     String @id @default(cuid())
+    userId Int
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime  @default(now())
+    expiresAt DateTime
+    revokedAt DateTime?
+
+    userAgent String?
+    ip        String?
+}

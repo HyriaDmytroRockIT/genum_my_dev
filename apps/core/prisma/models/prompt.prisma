@@ -1,0 +1,113 @@
+enum AssertionType {
+    STRICT
+    AI
+    MANUAL
+}
+
+model Prompt {
+    id                  Int           @id @default(autoincrement())
+    value               String
+    languageModelId     Int           @default(1)
+    languageModel       LanguageModel @relation(fields: [languageModelId], references: [id])
+    name                String        @db.VarChar(255)
+    languageModelConfig Json          @default("{}")
+
+    assertionType  AssertionType @default(STRICT)
+    assertionValue String?       @default("")
+
+    commited Boolean @default(false)
+
+    projectId Int
+    project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+    updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    testCases TestCase[]
+    branches  Branch[]
+    memories  Memory[]
+    chat      PromptChat[]
+    audit     Audit?
+}
+
+model PromptChat {
+    id        Int      @id @default(autoincrement())
+    promptId  Int
+    prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+    userId    Int
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    thread_id String?
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+    updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    messages PromptChatMessage[]
+
+    @@unique([userId, promptId])
+}
+
+model PromptChatMessage {
+    id           Int        @id @default(autoincrement())
+    promptChatId Int
+    promptChat   PromptChat @relation(fields: [promptChatId], references: [id], onDelete: Cascade)
+    message      Json
+    createdAt    DateTime   @default(now()) @db.Timestamp(6)
+}
+
+model Audit {
+    id        Int      @id @default(autoincrement())
+    promptId  Int
+    prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+    data      Json
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+    updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    @@unique([promptId])
+}
+
+model Branch {
+    id        Int      @id @default(autoincrement())
+    promptId  Int
+    prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+    name      String   @db.VarChar(255)
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+
+    promptVersions PromptVersion[]
+
+    @@unique([promptId, name]) // branch name is unique for each prompt
+}
+
+model PromptVersion {
+    id Int @id @default(autoincrement())
+
+    branchId Int
+    branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+    commitHash String
+    commitMsg  String
+    value      String
+
+    languageModelId     Int           @default(1)
+    languageModel       LanguageModel @relation(fields: [languageModelId], references: [id])
+    languageModelConfig Json          @default("{}")
+
+    audit Json?
+
+    authorId Int?
+    author   User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+    createdAt DateTime @default(now())
+}
+
+model Memory {
+    id        Int      @id @default(autoincrement())
+    key       String   @db.VarChar(255)
+    value     String
+    promptId  Int
+    prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+    updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    testCases TestCase[]
+
+    @@unique([key, promptId])
+}

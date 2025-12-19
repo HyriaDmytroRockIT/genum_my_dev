@@ -1,0 +1,67 @@
+enum OrganizationRole {
+    OWNER
+    ADMIN
+    READER
+}
+
+model Organization {
+    id          Int                      @id @default(autoincrement())
+    name        String                   @db.VarChar(255)
+    description String?
+    personal    Boolean                  @default(true)
+    quota       OrganizationQuota?
+    members     OrganizationMember[]
+    projects    Project[]
+    invitations OrganizationInvitation[]
+    apiKeys     OrganizationApiKey[]
+}
+
+model OrganizationQuota {
+    id        Int      @id @default(autoincrement())
+    balance   Float    @default(0)
+    createdAt DateTime @default(now()) @db.Timestamp(6)
+    updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    organizationId Int          @unique
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model OrganizationMember {
+    id             Int              @id @default(autoincrement())
+    userId         Int
+    organizationId Int
+    role           OrganizationRole
+
+    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, organizationId])
+}
+
+model OrganizationInvitation {
+    id             Int              @id @default(autoincrement())
+    email          String
+    organizationId Int
+    role           OrganizationRole
+    token          String           @unique @default(uuid(7))
+    createdAt      DateTime         @default(now())
+    expiresAt      DateTime
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    @@unique([email, organizationId])
+}
+
+model OrganizationApiKey {
+    id             Int      @id @default(autoincrement())
+    organizationId Int
+    vendor         AiVendor
+    key            String
+    publicKey      String
+    createdAt      DateTime @default(now()) @db.Timestamp(6)
+    updatedAt      DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+    @@unique([organizationId, vendor])
+}

@@ -1,0 +1,275 @@
+import useQueryWithAuth from "@/hooks/useQueryWithAuth";
+import { Button } from "@/components/ui/button";
+import { useParams, useNavigate } from "react-router-dom";
+import { promptApi } from "@/api/prompt";
+
+import { useEffect, useMemo, useState } from "react";
+
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { GitFork, GitCompare, Loader2 } from "lucide-react";
+import { capitalizeFirstLetter } from "@/lib/capitalizeFirstLetter";
+import CommitTimeline from "@/pages/prompt/playground-tabs/version/CommitTimeline";
+import { SearchInput } from "@/components/ui/searchInput";
+import CommitDialog from "@/components/dialogs/CommitDialog";
+import { toast } from "@/hooks/useToast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
+
+interface Author {
+	id: number;
+	name: string;
+	email: string;
+}
+
+interface PromptVersion {
+	id: number;
+	commitMsg: string;
+	commitHash: string;
+	createdAt: string;
+	author: Author;
+}
+
+export interface Branch {
+	id: number;
+	promptId: number;
+	name: string;
+	createdAt: string;
+	promptVersions: PromptVersion[];
+}
+
+function searchBranchesByCommitMsg(branches: Branch[], query: string): Branch[] {
+	if (!branches) return [];
+	return branches
+		.map((branch) => ({
+			...branch,
+			promptVersions: branch.promptVersions.filter((version) => {
+				const queryLower = query.toLowerCase();
+				return (
+					version.commitMsg.toLowerCase().includes(queryLower) ||
+					version.commitHash.toLowerCase().includes(queryLower)
+				);
+			}),
+		}))
+		.filter((branch) => branch.promptVersions.length > 0);
+}
+
+export default function Versions() {
+	const [branch, setBranch] = useState("");
+	const [commitDialogOpen, setCommitDialogOpen] = useState(false);
+	const [isCommitted, setIsCommitted] = useState(false);
+
+	const { id, orgId, projectId } = useParams<{
+		id: string;
+		orgId: string;
+		projectId: string;
+	}>();
+	const navigate = useNavigate();
+	const [search, setSearch] = useState("");
+	const queryClient = useQueryClient();
+
+	const { data, refetch } = useQueryWithAuth<{ branches: Branch[] }>({
+		keys: ["branches"],
+		queryFn: async () => {
+			if (!id) throw new Error("Prompt ID is required");
+			const result = await promptApi.getBranches(id);
+			// Transform API response to match expected type (author is required)
+			return {
+				branches: result.branches.map((branch) => ({
+					...branch,
+					promptVersions: branch.promptVersions.map((version) => ({
+						...version,
+						author: version.author || {
+							id: 0,
+							name: "Unknown",
+							email: "",
+						},
+					})),
+				})),
+			} as { branches: Branch[] };
+		},
+	});
+
+	const promptQuery = useQueryWithAuth({
+		keys: ["prompt", id || "null"],
+		enabled: !!id,
+		queryFn: async () => {
+			if (!id) throw new Error("Prompt ID is required");
+			return await promptApi.getPrompt(id);
+		},
+	});
+
+	useEffect(() => {
+		if (data?.branches && data.branches.length > 0 && !branch) {
+			setBranch(data.branches[0].name);
+		}
+	}, [data, branch]);
+
+	useEffect(() => {
+		if (promptQuery?.data?.prompt?.commited !== undefined) {
+			setIsCommitted(promptQuery.data.prompt.commited);
+		}
+	}, [promptQuery?.data?.prompt?.commited]);
+
+	const dataSearched = useMemo(
+		() => searchBranchesByCommitMsg(data?.branches || [], search),
+		[data, search],
+	);
+
+	const selectedBranchData = useMemo(() => {
+		if (!data?.branches) return [];
+		const found = data.branches.find((b: Branch) => b.name === branch);
+		if (!found) return [];
+		const productiveCommitId =
+			found.promptVersions.length > 0 ? found.promptVersions[0].id : null;
+		const filteredVersions = found.promptVersions.filter((version: PromptVersion) => {
+			const queryLower = search.toLowerCase();
+			return (
+				version.commitMsg.toLowerCase().includes(queryLower) ||
+				version.commitHash.toLowerCase().includes(queryLower)
+			);
+		});
+		return [{ ...found, promptVersions: filteredVersions, productiveCommitId }];
+	}, [data, branch, search]);
+
+	const commitHandler = async (value: string) => {
+		if (!id) return;
+		try {
+			await promptApi.commitPrompt(id, { commitMessage: value });
+			setCommitDialogOpen(false);
+			setIsCommitted(true);
+
+			queryClient.setQueryData(["prompt", id], (oldData: any) => {
+				if (!oldData) return oldData;
+				return {
+					...oldData,
+					prompt: {
+						...oldData.prompt,
+						commited: true,
+						lastCommit: "committed",
+					},
+				};
+			});
+
+			await Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: ["prompt", id],
+				}),
+				queryClient.invalidateQueries({
+					queryKey: ["branches"],
+				}),
+			]);
+
+			setTimeout(async () => {
+				await queryClient.refetchQueries({
+					queryKey: ["prompt", id],
+				});
+			}, 100);
+
+			refetch();
+			toast({
+				title: "Changes committed successfully",
+			});
+		} catch (error) {
+			setIsCommitted(false);
+			toast({
+				title: "Something went wrong",
+				variant: "destructive",
+			});
+		}
+	};
+
+	const handleCompare = () => {
+		if (id && orgId && projectId) {
+			navigate(`/${orgId}/${projectId}/prompt/${id}/compare`);
+		}
+	};
+
+	return (
+		<>
+			<div className="space-y-4 pt-8 max-w-[1232px] 2xl-plus:max-w-[70%] 2xl-plus:min-w-[1232px] 2xl-plus:w-[70%] ml-3 mr-6 w-full bg-background text-foreground">
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<div className="hidden">
+							<Select value={branch} onValueChange={setBranch}>
+								<SelectTrigger className="w-[125px] h-[36px]">
+									<div className="flex items-center gap-1 text-sm">
+										<GitFork className="size-4" />
+										<span>{capitalizeFirstLetter(branch)}</span>
+									</div>
+								</SelectTrigger>
+								<SelectContent>
+									{data?.branches &&
+										data.branches.length > 0 &&
+										data.branches.map((item: Branch) => (
+											<SelectItem
+												key={item.id}
+												value={item.name}
+												className="text-xs [&_svg]:size-4 [&_span]:flex [&_span]:gap-1"
+											>
+												<GitFork />
+												{capitalizeFirstLetter(item.name)}
+											</SelectItem>
+										))}
+								</SelectContent>
+							</Select>
+						</div>
+
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										className="px-7 w-[86px]"
+										onClick={() => setCommitDialogOpen(true)}
+										disabled={isCommitted}
+									>
+										Commit
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Save prompt changes</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="outline"
+										className="px-4 h-[36px] flex items-center gap-2"
+										onClick={handleCompare}
+									>
+										<GitCompare className="size-4" />
+										Compare
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>Compare prompt versions</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					</div>
+
+					<div className="flex items-center gap-3">
+						<SearchInput
+							placeholder="Search..."
+							className="min-w-[252px] h-[36px]"
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+						/>
+					</div>
+				</div>
+
+				<CommitTimeline branches={selectedBranchData} />
+			</div>
+
+			<CommitDialog
+				open={commitDialogOpen}
+				setOpen={setCommitDialogOpen}
+				confirmationHandler={commitHandler}
+				loading={false}
+				promptId={id || ""}
+			/>
+		</>
+	);
+}

@@ -1,0 +1,82 @@
+import * as React from "react";
+import { Outlet, NavLink, useLocation, Navigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useAddParamsToUrl } from "@/lib/addParamsToUrl";
+
+type MenuSection = {
+	title: string;
+	items: { label: string; to: string }[];
+};
+
+const MENU: MenuSection[] = [
+	{
+		title: "User",
+		items: [{ label: "Profile", to: "/settings/user/profile" }],
+	},
+	{
+		title: "Organization",
+		items: [
+			{ label: "Details", to: "/settings/org/details" },
+			{ label: "Members", to: "/settings/org/members" },
+			{ label: "Projects", to: "/settings/org/projects" },
+			{ label: "LLM API Keys", to: "/settings/org/ai-keys" },
+			{ label: "API Keys", to: "/settings/org/api-keys" },
+		],
+	},
+	{
+		title: "Project",
+		items: [
+			{ label: "Details", to: "/settings/project/details" },
+			// { label: "Members", to: "/settings/project/members" },
+			{ label: "API Keys", to: "/settings/project/api-keys" },
+		],
+	},
+];
+
+function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
+	const addParamsToUrl = useAddParamsToUrl();
+
+	return (
+		<NavLink
+			to={addParamsToUrl(to)}
+			end
+			className={({ isActive }) =>
+				cn(
+					"block rounded-md px-2 py-[9px] h-[32px] text-sm dark:text-[#F4F4F5] hover:dark:text-[#a3a3a3] font-normal transition-colors leading-[1]",
+					isActive
+						? "bg-muted dark:text-[#F4F4F5] font-medium"
+						: "hover:bg-muted text-muted-foreground",
+				)
+			}
+		>
+			{children}
+		</NavLink>
+	);
+}
+
+export default function Settings() {
+	return (
+		<div className="container pt-6 max-w-[1232px] 2xl-plus:max-w-[70%] 2xl-plus:min-w-[1232px] 2xl-plus:w-[70%] mx-3 w-full">
+			<div className="flex flex-col gap-6 md:flex-row mt-3">
+				<aside className="shrink-0 w-[216px]">
+					{MENU.map((section) => (
+						<div key={section.title} className="mb-1">
+							<h3 className="leading-[36px] mb-1 text-sm font-medium text-[#18181B] dark:text-[#FAFAFA]">
+								{section.title}
+							</h3>
+							{section.items.map((item) => (
+								<NavItem key={item.to} to={item.to}>
+									{item.label}
+								</NavItem>
+							))}
+						</div>
+					))}
+				</aside>
+
+				<main className="flex-1">
+					<Outlet />
+				</main>
+			</div>
+		</div>
+	);
+}

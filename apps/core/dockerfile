@@ -1,0 +1,79 @@
+# Stage 1: Builder - Compile TypeScript
+FROM node:20-alpine AS builder
+
+# Install openssl for Prisma
+RUN apk add --no-cache openssl
+
+# Enable corepack for pnpm support
+RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
+
+# Set working directory
+WORKDIR /app
+
+# Copy root pnpm files (monorepo setup)
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY scripts ./scripts
+
+# Copy app package.json
+COPY apps/core/package.json ./apps/core/
+
+# Install all dependencies (including devDependencies for build)
+# Use --filter to install only core app dependencies
+RUN DOCKER_BUILD=true pnpm install --frozen-lockfile --filter core
+
+# Copy source code and configuration files
+COPY apps/core/ ./apps/core/
+
+# Generate Prisma client and build
+WORKDIR /app/apps/core
+RUN pnpm exec prisma generate
+RUN pnpm run build:full
+WORKDIR /app
+
+# Stage 2: Runtime - Production image
+FROM node:20-alpine AS runtime
+
+# Install openssl for Prisma
+RUN apk add --no-cache openssl
+
+# Enable corepack for pnpm support
+RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
+
+# Set working directory
+WORKDIR /app
+
+# Copy root pnpm files (monorepo setup)
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY scripts ./scripts
+
+# Copy app package.json
+COPY apps/core/package.json ./apps/core/
+
+# Install only production dependencies
+RUN DOCKER_BUILD=true pnpm install --frozen-lockfile --prod --filter core
+
+# Copy compiled JavaScript from builder stage
+COPY --from=builder /app/apps/core/dist ./apps/core/dist
+COPY --from=builder /app/apps/core/docker-entrypoint.sh ./apps/core/docker-entrypoint.sh
+
+COPY --from=builder /app/apps/core/src/ai ./apps/core/src/ai
+
+# Copy static files (JSON configs) that are not compiled by TypeScript
+COPY --from=builder /app/apps/core/src/ai/models/config ./apps/core/dist/ai/models/config
+
+# Copy Prisma schema, config and generated client
+COPY --from=builder /app/apps/core/prisma ./apps/core/prisma
+COPY --from=builder /app/apps/core/prisma.config.ts ./apps/core/prisma.config.ts
+COPY --from=builder /app/apps/core/clickhouse ./apps/core/clickhouse
+
+# Set working directory to core app
+WORKDIR /app/apps/core
+
+RUN chmod +x ./docker-entrypoint.sh
+
+# Expose port
+EXPOSE 3010
+
+# Run migrations + seed, then start the server
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["node", "dist/server.js"]

@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"module": "esnext",
+		"target": "esnext",
+		"moduleResolution": "node",
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["src/*"],
+			"@/layout/*": ["src/layout/*"],
+			"@/pages/*": ["src/pages/*"],
+			"@/components/*": ["src/components/*"]
+		},
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": true
+	},
+	"include": ["src"]
+}

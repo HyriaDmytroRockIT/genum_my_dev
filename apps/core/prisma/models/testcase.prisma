@@ -1,0 +1,26 @@
+enum TestCaseStatus {
+    OK
+    NOK
+    PENDING
+    NEED_RUN
+    FAILED
+}
+
+model TestCase {
+    id                      Int            @id @default(autoincrement())
+    name                    String         @db.VarChar(255)
+    promptId                Int
+    input                   String
+    expectedOutput          String
+    expectedChainOfThoughts String?
+    lastOutput              String
+    lastChainOfThoughts     String?
+    memoryId                Int?
+    memory                  Memory?        @relation(fields: [memoryId], references: [id], onDelete: SetNull)
+    status                  TestCaseStatus @default(NEED_RUN)
+    assertionThoughts       String?        @default("")
+    createdAt               DateTime       @default(now()) @db.Timestamp(6)
+    updatedAt               DateTime       @default(now()) @updatedAt @db.Timestamp(6)
+
+    prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+}

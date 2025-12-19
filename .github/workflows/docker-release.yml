@@ -1,0 +1,101 @@
+name: Docker Build and Push on Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  DOCKER_REGISTRY: docker.io
+  DOCKER_IMAGE_PREFIX: ${{ secrets.DOCKER_HUB_USERNAME || 'genum' }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    if: github.event.repository.fork == false && (github.event.release.target_commitish == 'main' || github.event.release.target_commitish == 'refs/heads/main')
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify tag is on main branch
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          if ! git branch -r --contains "$TAG" | grep -q "origin/main"; then
+            echo "Error: Release tag $TAG is not on main branch"
+            exit 1
+          fi
+          echo "✓ Tag $TAG is on main branch"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,amd64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Extract release version
+        id: release_version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          if [[ ! "$TAG" =~ ^v ]]; then
+            echo "Error: Release tag must start with 'v' (e.g., v1.0.0)"
+            exit 1
+          fi
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "latest_tag=latest" >> $GITHUB_OUTPUT
+
+      - name: Build and push Core image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/core/dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/core:${{ steps.release_version.outputs.tag }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/core:${{ steps.release_version.outputs.latest_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./apps/web/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/web:${{ steps.release_version.outputs.tag }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/web:${{ steps.release_version.outputs.latest_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "## 🐳 Docker Images Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Core" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/core:${{ steps.release_version.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/core:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Web" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/web:${{ steps.release_version.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_PREFIX }}/web:latest\`" >> $GITHUB_STEP_SUMMARY
+

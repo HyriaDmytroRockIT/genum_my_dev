@@ -1,0 +1,449 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*::selection {
+	background-color: #ddd;
+	color: #000;
+}
+
+html.dark {
+	background-color: #000;
+}
+
+:root {
+	--chart-1: 262 83% 77%;
+	--chart-2: 158 54% 80%;
+	--chart-3: 330 100% 92%;
+	--chart-4: 276 57% 62%;
+	--chart-5: 130 52% 84%;
+	--chart-6: 0 100% 85%;
+	--chart-7: 217 88% 69%;
+	--chart-8: 120 26% 86%;
+	--chart-9: 41 100% 85%;
+	--chart-10: 210 84% 86%;
+	--chart-11: 84 76% 86%;
+	--chart-12: 30 82% 90%;
+}
+
+.dark {
+	--chart-1: 262 83% 72%;
+	--chart-2: 135 57% 41%;
+	--chart-3: 330 75% 75%;
+	--chart-4: 276 57% 58%;
+	--chart-5: 130 45% 60%;
+	--chart-6: 0 64% 56%;
+	--chart-7: 217 78% 64%;
+	--chart-8: 120 20% 45%;
+	--chart-9: 41 90% 60%;
+	--chart-10: 210 70% 70%;
+	--chart-11: 84 60% 60%;
+	--chart-12: 30 70% 65%;
+}
+
+:root {
+	font-family: Inter, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+
+	color-scheme: light dark;
+	color: rgba(255, 255, 255, 0.87);
+	background-color: #242424;
+
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+	background-color: #d4d4d8;
+	border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+	background-color: #52525b;
+}
+
+html,
+body,
+#root {
+	height: 100%;
+	width: 100%;
+}
+
+a {
+	font-weight: 500;
+	color: #3f3f46;
+	text-decoration: inherit;
+}
+
+a:hover {
+	color: #18181b;
+}
+
+body {
+	margin: 0;
+	display: block;
+	place-items: center;
+	min-width: 320px;
+	min-height: 100vh;
+}
+
+h1 {
+	font-size: 3.2em;
+	line-height: 1.1;
+}
+
+@media (prefers-color-scheme: light) {
+	:root {
+		color: #213547;
+		background-color: #ffffff;
+	}
+
+	a:hover {
+		color: #18181b;
+	}
+
+	button {
+		background-color: transparent;
+	}
+}
+
+@layer base {
+	:root {
+		--background: 0 0% 100%;
+		--foreground: 0 0% 3.9%;
+		--card: 0 0% 100%;
+		--card-foreground: 0 0% 3.9%;
+		--popover: 0 0% 100%;
+		--popover-foreground: 0 0% 3.9%;
+		--primary: 0 0% 9%;
+		--primary-foreground: 0 0% 98%;
+		--secondary: 0 0% 96.1%;
+		--secondary-foreground: 0 0% 9%;
+		--muted: 0 0% 96.1%;
+		--muted-foreground: 0 0% 45.1%;
+		--accent: 0 0% 96.1%;
+		--accent-foreground: 0 0% 9%;
+		--destructive: 0 84.2% 60.2%;
+		--destructive-foreground: 0 0% 98%;
+		--border: 0 0% 89.8%;
+		--input: 0 0% 89.8%;
+		--ring: 0 0% 3.9%;
+		--chart-1: 12 76% 61%;
+		--chart-2: 173 58% 39%;
+		--chart-3: 197 37% 24%;
+		--chart-4: 43 74% 66%;
+		--chart-5: 27 87% 67%;
+		--radius: 0.5rem;
+		--sidebar-background: 0 0% 98%;
+		--sidebar-foreground: 240 5.3% 26.1%;
+		--sidebar-primary: 240 5.9% 10%;
+		--sidebar-primary-foreground: 0 0% 98%;
+		--sidebar-accent: 240 4.8% 95.9%;
+		--sidebar-accent-foreground: 240 5.9% 10%;
+		--sidebar-border: 220 13% 91%;
+		--sidebar-ring: 217.2 91.2% 59.8%;
+	}
+
+	.dark {
+		--background: 0 0% 12.94%;
+		--foreground: 0 0% 98%;
+		--card: 0 0% 12.94%;
+		--card-foreground: 0 0% 98%;
+		--popover: 0 0% 3.9%;
+		--popover-foreground: 0 0% 98%;
+		--primary: 0 0% 98%;
+		--primary-foreground: 0 0% 9%;
+		--secondary: 0 0% 14.9%;
+		--secondary-foreground: 0 0% 98%;
+		--muted: 0 0% 14.9%;
+		--muted-foreground: 240 5.03% 64.9%;
+		--accent: 0 0% 14.9%;
+		--accent-foreground: 0 0% 98%;
+		--destructive: 0 62.8% 30.6%;
+		--destructive-foreground: 0 0% 98%;
+		--border: 220 2.44% 24.12%;
+		--input: 240 3.7% 15.88%;
+		--ring: 0 0% 83.1%;
+		--chart-1: 220 70% 50%;
+		--chart-2: 160 60% 45%;
+		--chart-3: 30 80% 55%;
+		--chart-4: 280 65% 60%;
+		--chart-5: 340 75% 55%;
+		--sidebar-background: 0 0% 7.45%;
+		--sidebar-foreground: 240 4.8% 95.9%;
+		--sidebar-primary: 224.3 76.3% 48%;
+		--sidebar-primary-foreground: 0 0% 100%;
+		--sidebar-accent: 240 3.7% 15.9%;
+		--sidebar-accent-foreground: 240 4.8% 95.9%;
+		--sidebar-border: 240 3.7% 15.9%;
+		--sidebar-ring: 217.2 91.2% 59.8%;
+	}
+}
+
+@layer base {
+	* {
+		@apply border-border;
+	}
+
+	body {
+		@apply bg-background text-foreground;
+	}
+}
+
+.ProseMirror {
+	min-height: 130px;
+	max-height: 130px;
+	outline: none;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	scrollbar-color: #c4c4c4 transparent;
+}
+
+.ProseMirror::-webkit-scrollbar {
+	width: 6px;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+	content: attr(data-placeholder);
+	color: #71717a;
+	pointer-events: none;
+	height: 0;
+	position: absolute;
+	opacity: 0.8;
+	top: 0;
+	left: 0;
+}
+
+[role="dialog"] .ProseMirror {
+	height: 60vh;
+	min-height: 60vh;
+}
+
+.monaco-editor {
+	outline: unset !important;
+}
+
+.monaco-diff-editor.side-by-side .editor.modified {
+	box-shadow: none !important;
+	border-left: 1px solid hsl(var(--border)) !important;
+}
+
+html.firefox .monaco-editor,
+html.firefox .monaco-diff-editor {
+	transform: none !important;
+	will-change: auto !important;
+	-moz-transform: none !important;
+}
+
+html.firefox .monaco-editor .view-lines,
+html.firefox .monaco-diff-editor .view-lines {
+	transform: none !important;
+	-moz-transform: none !important;
+	position: relative !important;
+	contain: none !important;
+}
+
+html.firefox .monaco-editor .view-overlay,
+html.firefox .monaco-diff-editor .view-overlay {
+	transform: none !important;
+	-moz-transform: none !important;
+}
+
+html.firefox .monaco-editor .margin,
+html.firefox .monaco-diff-editor .margin {
+	transform: none !important;
+	-moz-transform: none !important;
+}
+
+html.firefox .monaco-editor .lines-content,
+html.firefox .monaco-diff-editor .lines-content {
+	transform: none !important;
+	-moz-transform: none !important;
+}
+
+html.firefox .monaco-editor .monaco-scrollable-element,
+html.firefox .monaco-diff-editor .monaco-scrollable-element {
+	contain: none !important;
+}
+
+html.firefox .monaco-editor .inputarea,
+html.firefox .monaco-diff-editor .inputarea {
+	opacity: 1 !important;
+	position: absolute !important;
+}
+
+html.firefox .DiffEditor {
+	zoom: normal !important;
+}
+
+@-moz-document url-prefix() {
+	table {
+		border: transparent !important;
+	}
+
+	table th,
+	table td {
+		border: transparent !important;
+	}
+}
+
+@media (min-width: 1200px) and (max-width: 1369px) {
+	.DiffEditor {
+		zoom: 0.7;
+	}
+
+	html.firefox .DiffEditor {
+		zoom: normal;
+		transform: scale(1.1);
+		transform-origin: top left;
+		width: calc(100% / 1.1);
+		height: calc(100% / 1.1);
+	}
+}
+
+@media (min-width: 1370px) and (max-width: 1550px) {
+	.DiffEditor {
+		zoom: 0.8;
+	}
+
+	html.firefox .DiffEditor {
+		zoom: normal;
+		transform: scale(1.1);
+		transform-origin: top left;
+		width: calc(100% / 1.1);
+		height: calc(100% / 1.1);
+	}
+}
+
+@media (max-width: 1470px) {
+	html:not(.firefox) {
+		zoom: 0.9;
+	}
+
+	html:not(.firefox) [data-radix-popper-content-wrapper] {
+		zoom: calc(1 / 0.9);
+	}
+}
+
+@media (min-width: 1720px) {
+	html:not(.firefox) {
+		zoom: 1.1;
+	}
+
+	html:not(.firefox) [data-radix-popper-content-wrapper] {
+		zoom: calc(1 / 1.1);
+	}
+}
+
+html.safari {
+	zoom: 1 !important;
+}
+
+html.safari [data-radix-popper-content-wrapper] {
+	zoom: 1 !important;
+}
+
+html.firefox .monaco-editor,
+html.firefox .monaco-diff-editor {
+	zoom: normal !important;
+}
+
+@layer components {
+	.tailwind-list-reset {
+		& ul {
+			list-style-type: disc;
+			margin-left: 1.25em;
+		}
+
+		& ol {
+			list-style-type: decimal;
+			margin-left: 1.25em;
+		}
+
+		& ul,
+		& ol {
+			padding-left: 0;
+		}
+
+		& .ProseMirror h1,
+		& .ProseMirror h2,
+		& .ProseMirror h3,
+		& .ProseMirror h4,
+		& .ProseMirror h5,
+		& .ProseMirror h6 {
+			all: revert;
+		}
+
+		& .ProseMirror h1 {
+			font-size: 2.5em;
+			line-height: 1.2;
+			margin-top: 0.8em;
+			margin-bottom: 0.4em;
+		}
+
+		& .ProseMirror h2 {
+			font-size: 2em;
+			line-height: 1.25;
+			margin-top: 0.7em;
+			margin-bottom: 0.35em;
+		}
+
+		& .ProseMirror h3 {
+			font-size: 1.5em;
+			line-height: 1.3;
+			margin-top: 0.6em;
+			margin-bottom: 0.3em;
+		}
+
+		& .ProseMirror h4 {
+			font-size: 1.2em;
+			line-height: 1.3;
+			margin-top: 0.5em;
+			margin-bottom: 0.25em;
+		}
+
+		& .ProseMirror h5 {
+			font-size: 1em;
+			line-height: 1.4;
+			margin-top: 0.4em;
+			margin-bottom: 0.2em;
+		}
+
+		& .ProseMirror h6 {
+			font-size: 0.85em;
+			line-height: 1.4;
+			margin-top: 0.3em;
+			margin-bottom: 0.15em;
+		}
+	}
+}
+
+.DiffEditor .margin {
+	min-width: 40px !important;
+	width: auto !important;
+}
+
+.monaco-diff-editor .original .margin,
+.monaco-diff-editor .modified .margin {
+	min-width: 40px !important;
+}
+
+[data-scroll-locked][data-scroll-locked] {
+	overflow-y: scroll !important;
+}

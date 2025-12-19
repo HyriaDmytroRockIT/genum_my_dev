@@ -1,0 +1,17 @@
+node_modules
+.DS_Store
+.tmp
+tmp
+dist
+.env
+**/package-lock.json
+packages/**/.turbo
+.turbo
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+
+.generated

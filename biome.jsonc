@@ -1,0 +1,42 @@
+{
+	"files": {
+		"includes": [
+			"**/*",
+			"!.turbo",
+			"!**/.turbo",
+			"!.generated",
+			"!**/.generated",
+			"!dist",
+			"!**/dist",
+			"!**/package.json",
+			"!**/pnpm-lock.yaml"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"indentWidth": 4,
+		"lineEnding": "lf",
+		"lineWidth": 100
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"suspicious": {
+				"noExplicitAny": "off"
+			}
+		}
+	},
+	"assist": {
+		"actions": {
+			"source": {
+				"organizeImports": "off"
+			}
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
+}

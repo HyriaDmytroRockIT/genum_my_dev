@@ -1,0 +1,24 @@
+enum AiVendor {
+    OPENAI
+    GOOGLE
+    ANTHROPIC
+}
+
+model LanguageModel {
+    id                  Int      @id @default(autoincrement())
+    name                String   @db.VarChar(255)
+    displayName         String?  @db.VarChar(255)
+    vendor              AiVendor @default(OPENAI)
+    promptPrice         Float    @default(0)
+    completionPrice     Float    @default(0)
+    contextTokensMax    Int      @default(0)
+    completionTokensMax Int      @default(0)
+    description         String   @default("")
+    createdAt           DateTime @default(now()) @db.Timestamp(6)
+    updatedAt           DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+    Prompts       Prompt[]
+    PromptVersion PromptVersion[]
+
+    @@unique([vendor, name])
+}
