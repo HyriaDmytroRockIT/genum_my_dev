@@ -6,8 +6,6 @@ import {
 	EyeOff,
 	RefreshCw,
 	Server,
-	CheckCircle2,
-	XCircle,
 	Loader2,
 	Settings,
 	Edit,
@@ -18,9 +16,7 @@ import { organizationApi } from "@/api/organization";
 import type {
 	CustomProvider,
 	CustomProviderDeleteStatus,
-	ProviderModel,
 	LanguageModel,
-	ModelParameterConfig,
 } from "@/api/organization";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -53,6 +49,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CustomModelDialog from "@/components/dialogs/CustomModelDialog";
+import ModelConfigDialog from "@/components/dialogs/ModelConfigDialog";
 
 type Vendor = "OPENAI" | "GOOGLE" | "ANTHROPIC";
 enum SettingsTab {
@@ -96,16 +94,6 @@ export default function OrgAIKeys() {
 
 	// Provider dialog
 	const [openProviderDialog, setOpenProviderDialog] = React.useState(false);
-	const [providerBaseUrl, setProviderBaseUrl] = React.useState("");
-	const [providerApiKey, setProviderApiKey] = React.useState("");
-	const [showProviderApiKey, setShowProviderApiKey] = React.useState(false);
-	const [isTestingConnection, setIsTestingConnection] = React.useState(false);
-	const [connectionTestResult, setConnectionTestResult] = React.useState<{
-		success: boolean;
-		models?: ProviderModel[];
-		error?: string;
-	} | null>(null);
-	const [isSavingProvider, setIsSavingProvider] = React.useState(false);
 
 	// Delete provider dialog
 	const [deleteProviderDialogOpen, setDeleteProviderDialogOpen] = React.useState(false);
@@ -250,75 +238,6 @@ export default function OrgAIKeys() {
 	};
 
 	// ==================== Custom Provider Handlers ====================
-
-	const openEditProviderDialog = () => {
-		if (customProvider) {
-			setProviderBaseUrl(customProvider.baseUrl || "");
-			setProviderApiKey(""); // Don't show existing key for security
-		} else {
-			setProviderBaseUrl("");
-			setProviderApiKey("");
-		}
-		setConnectionTestResult(null);
-		setOpenProviderDialog(true);
-	};
-
-	const testConnection = async () => {
-		if (!providerBaseUrl.trim()) return;
-
-		try {
-			setIsTestingConnection(true);
-			setConnectionTestResult(null);
-
-			const result = await organizationApi.testProviderConnection({
-				apiKey: providerApiKey.trim(),
-				baseUrl: providerBaseUrl.trim(),
-			});
-
-			setConnectionTestResult(result);
-		} catch (e) {
-			console.error(e);
-			setConnectionTestResult({
-				success: false,
-				error: e instanceof Error ? e.message : "Connection failed",
-			});
-		} finally {
-			setIsTestingConnection(false);
-		}
-	};
-
-	const handleSaveProvider = async () => {
-		if (!providerBaseUrl.trim() || isSavingProvider) return;
-
-		try {
-			setIsSavingProvider(true);
-
-			await organizationApi.upsertCustomProvider({
-				vendor: "CUSTOM_OPENAI_COMPATIBLE",
-				baseUrl: providerBaseUrl.trim(),
-				key: providerApiKey.trim(),
-			});
-
-			toast({ title: "Success", description: "Provider saved" });
-
-			setOpenProviderDialog(false);
-			setProviderBaseUrl("");
-			setProviderApiKey("");
-			setShowProviderApiKey(false);
-			setConnectionTestResult(null);
-
-			await fetchCustomProvider();
-		} catch (e) {
-			console.error(e);
-			toast({
-				title: "Error",
-				description: e instanceof Error ? e.message : "Cannot save provider",
-				variant: "destructive",
-			});
-		} finally {
-			setIsSavingProvider(false);
-		}
-	};
 
 	const handleDeleteProvider = async () => {
 		if (isDeletingProvider || isCheckingDeleteStatus) return;
@@ -548,7 +467,10 @@ export default function OrgAIKeys() {
 											Connect an OpenAI-compatible endpoint to sync and configure models.
 										</p>
 										<div className="flex items-center justify-center gap-3">
-											<Button size="default" onClick={openEditProviderDialog}>
+											<Button
+												size="default"
+												onClick={() => setOpenProviderDialog(true)}
+											>
 												<PlusCircle className="mr-2 h-4 w-4" /> Add Provider
 											</Button>
 											<a
@@ -582,7 +504,7 @@ export default function OrgAIKeys() {
 												<Button
 													variant="outline"
 													size="sm"
-													onClick={openEditProviderDialog}
+													onClick={() => setOpenProviderDialog(true)}
 												>
 													<Edit className="h-4 w-4" />
 												</Button>
@@ -658,145 +580,12 @@ export default function OrgAIKeys() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Provider Dialog (Add/Edit) */}
-			<Dialog
+			<CustomModelDialog
 				open={openProviderDialog}
-				onOpenChange={(open) => {
-					setOpenProviderDialog(open);
-					if (!open) {
-						setConnectionTestResult(null);
-					}
-				}}
-			>
-				<DialogContent className="sm:max-w-[500px]">
-					<DialogHeader>
-						<DialogTitle>
-							{customProvider ? "Edit" : "Configure"} Custom Provider
-						</DialogTitle>
-						<DialogDescription>
-							Connect to an OpenAI-compatible API endpoint
-						</DialogDescription>
-					</DialogHeader>
-
-					<div className="space-y-4 py-2">
-						<div className="space-y-1">
-							<Label>Base URL</Label>
-							<Input
-								value={providerBaseUrl}
-								onChange={(e) => setProviderBaseUrl(e.target.value)}
-								placeholder="http://localhost:11434/v1"
-							/>
-							<p className="text-xs text-muted-foreground">
-								Examples: http://localhost:11434/v1, http://localhost:1234/v1
-							</p>
-						</div>
-
-						<div className="space-y-1">
-							<Label>
-								API Key{" "}
-								<span className="text-muted-foreground font-normal">
-									(optional)
-								</span>
-							</Label>
-							<div className="relative">
-								<Input
-									type={showProviderApiKey ? "text" : "password"}
-									value={providerApiKey}
-									onChange={(e) => setProviderApiKey(e.target.value)}
-									className="pr-10"
-									placeholder={
-										customProvider
-											? "Leave empty to keep existing key"
-											: "API key for authentication"
-									}
-								/>
-								<button
-									type="button"
-									className="absolute right-2 top-2 text-zinc-500 [&_svg]:size-5"
-									onClick={() => setShowProviderApiKey((s) => !s)}
-								>
-									{showProviderApiKey ? (
-										<EyeOff className="h-4 w-4" />
-									) : (
-										<Eye className="h-4 w-4" />
-									)}
-								</button>
-							</div>
-						</div>
-
-						{/* Test Connection */}
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								onClick={testConnection}
-								disabled={!providerBaseUrl.trim() || isTestingConnection}
-							>
-								{isTestingConnection ? (
-									<>
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Testing...
-									</>
-								) : (
-									"Test Connection"
-								)}
-							</Button>
-
-							{connectionTestResult && (
-								<div className="flex items-center gap-2">
-									{connectionTestResult.success ? (
-										<>
-											<CheckCircle2 className="h-4 w-4 text-green-500" />
-											<span className="text-sm text-green-600">
-												Connected ({connectionTestResult.models?.length}{" "}
-												models)
-											</span>
-										</>
-									) : (
-										<>
-											<XCircle className="h-4 w-4 text-red-500" />
-											<span className="text-sm text-red-600">
-												{connectionTestResult.error || "Failed"}
-											</span>
-										</>
-									)}
-								</div>
-							)}
-						</div>
-
-						{/* Available Models Preview */}
-						{connectionTestResult?.success &&
-							connectionTestResult.models &&
-							connectionTestResult.models.length > 0 && (
-								<div className="border rounded-md p-3 bg-muted/30">
-									<p className="text-sm font-medium mb-2">Available Models:</p>
-									<div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
-										{connectionTestResult.models.map((model) => (
-											<Badge
-												key={model.id}
-												variant="secondary"
-												className="text-xs"
-											>
-												{model.id}
-											</Badge>
-										))}
-									</div>
-								</div>
-							)}
-					</div>
-
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setOpenProviderDialog(false)}>
-							Cancel
-						</Button>
-						<Button
-							onClick={handleSaveProvider}
-							disabled={!providerBaseUrl.trim() || isSavingProvider}
-						>
-							{isSavingProvider ? "Saving..." : "Save"}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+				onOpenChange={setOpenProviderDialog}
+				customProvider={customProvider}
+				onSaved={fetchCustomProvider}
+			/>
 
 			{/* Delete Provider Dialog */}
 			<Dialog open={deleteProviderDialogOpen} onOpenChange={setDeleteProviderDialogOpen}>
@@ -971,329 +760,5 @@ function ProviderModelsSection({ providerId: _providerId }: { providerId: number
 				/>
 			)}
 		</div>
-	);
-}
-
-// ==================== Model Config Dialog Component ====================
-
-const DEFAULT_PARAMETERS: Record<string, ModelParameterConfig> = {
-	temperature: {
-		enabled: false,
-		min: 0,
-		max: 2,
-		default: 0.7,
-	},
-	max_tokens: {
-		enabled: false,
-		min: 1,
-		max: 128000,
-		default: 4096,
-	},
-	response_format: {
-		enabled: false,
-		allowed: ["text", "json_object", "json_schema"],
-		default: "text",
-	},
-	tools: {
-		enabled: false,
-	},
-};
-
-interface ModelConfigDialogProps {
-	model: LanguageModel;
-	open: boolean;
-	onOpenChange: (open: boolean) => void;
-	onSaved: () => void;
-}
-
-function ModelConfigDialog({ model, open, onOpenChange, onSaved }: ModelConfigDialogProps) {
-	const { toast } = useToast();
-	const [isSaving, setIsSaving] = React.useState(false);
-	const [displayName, setDisplayName] = React.useState(model.displayName || model.name);
-	const [parametersConfig, setParametersConfig] = React.useState<
-		Record<string, ModelParameterConfig>
-	>(() => {
-		const existing = (model.parametersConfig as Record<string, ModelParameterConfig>) || {};
-		const merged = { ...DEFAULT_PARAMETERS };
-		for (const [key, value] of Object.entries(existing)) {
-			const fallback = DEFAULT_PARAMETERS[key] || { enabled: false };
-			merged[key] = {
-				...fallback,
-				...value,
-				enabled: value.enabled ?? true,
-			};
-		}
-		return merged;
-	});
-
-	React.useEffect(() => {
-		setDisplayName(model.displayName || model.name);
-		const existing = (model.parametersConfig as Record<string, ModelParameterConfig>) || {};
-		const merged = { ...DEFAULT_PARAMETERS };
-		for (const [key, value] of Object.entries(existing)) {
-			const fallback = DEFAULT_PARAMETERS[key] || { enabled: false };
-			merged[key] = {
-				...fallback,
-				...value,
-				enabled: value.enabled ?? true,
-			};
-		}
-		setParametersConfig(merged);
-	}, [model]);
-
-	const toggleParameter = (paramName: string) => {
-		setParametersConfig((prev) => ({
-			...prev,
-			[paramName]: {
-				...prev[paramName],
-				enabled: !prev[paramName].enabled,
-			},
-		}));
-	};
-
-	const updateParameterValue = (
-		paramName: string,
-		field: keyof ModelParameterConfig,
-		value: number | string,
-	) => {
-		setParametersConfig((prev) => ({
-			...prev,
-			[paramName]: {
-				...prev[paramName],
-				[field]: value,
-			},
-		}));
-	};
-
-	const toggleAllowedValue = (paramName: string, value: string) => {
-		setParametersConfig((prev) => {
-			const current = prev[paramName];
-			const allowed = new Set(current.allowed ?? []);
-			if (allowed.has(value)) {
-				allowed.delete(value);
-			} else {
-				allowed.add(value);
-			}
-
-			const nextAllowed = Array.from(allowed);
-			const defaultValue =
-				typeof current.default === "string" && nextAllowed.includes(current.default)
-					? current.default
-					: nextAllowed[0] ?? "text";
-
-			return {
-				...prev,
-				[paramName]: {
-					...current,
-					allowed: nextAllowed,
-					default: defaultValue,
-				},
-			};
-		});
-	};
-
-	const handleSave = async () => {
-		try {
-			setIsSaving(true);
-
-			const enabledConfig: Record<string, ModelParameterConfig> = {};
-			for (const [key, config] of Object.entries(parametersConfig)) {
-				if (config.enabled) {
-					enabledConfig[key] = config;
-				}
-			}
-
-			await organizationApi.updateCustomModel(model.id, {
-				displayName: displayName.trim() || model.name,
-				parametersConfig: enabledConfig,
-			});
-
-			toast({ title: "Success", description: "Model configuration saved" });
-			onSaved();
-			onOpenChange(false);
-		} catch (e) {
-			console.error(e);
-			toast({
-				title: "Error",
-				description: "Failed to save configuration",
-				variant: "destructive",
-			});
-		} finally {
-			setIsSaving(false);
-		}
-	};
-
-	const parameterLabels: Record<string, string> = {
-		temperature: "Temperature",
-		max_tokens: "Max Tokens",
-		response_format: "Response Format",
-		tools: "Tools",
-	};
-	const parameterValueLabels: Record<string, string> = {
-		json_object: "json_obj",
-	};
-	const responseFormatOptions = ["text", "json_object", "json_schema"];
-
-	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-				<DialogHeader>
-					<DialogTitle>Configure Model: {model.name}</DialogTitle>
-					<DialogDescription>
-						Select which parameters this model supports and configure their limits.
-					</DialogDescription>
-				</DialogHeader>
-
-				<div className="space-y-6 py-4">
-					<div className="space-y-2">
-						<Label>Display Name</Label>
-						<Input
-							value={displayName}
-							onChange={(e) => setDisplayName(e.target.value)}
-							placeholder={model.name}
-						/>
-					</div>
-
-					<div className="space-y-4">
-						<Label className="text-base font-medium">Supported Parameters</Label>
-						<p className="text-sm text-muted-foreground">
-							Enable the parameters that this model supports.
-						</p>
-
-						{Object.entries(parametersConfig).map(([paramName, config]) => (
-							<div key={paramName} className="border rounded-md p-4 space-y-3">
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-3">
-										<input
-											type="checkbox"
-											id={`param-${paramName}`}
-											checked={config.enabled}
-											onChange={() => toggleParameter(paramName)}
-											className="h-4 w-4 rounded border-gray-300"
-										/>
-										<label
-											htmlFor={`param-${paramName}`}
-											className="font-medium cursor-pointer"
-										>
-											{parameterLabels[paramName] || paramName}
-										</label>
-									</div>
-								</div>
-
-								{config.enabled && (
-									<div className="pl-7 space-y-4">
-										{config.allowed ? (
-											<div className="space-y-3">
-												<div className="flex flex-wrap gap-3">
-													{responseFormatOptions.map((val) => (
-														<label
-															key={val}
-															className="flex items-center gap-2 text-sm"
-														>
-															<input
-																type="checkbox"
-																checked={(config.allowed ?? []).includes(val)}
-																onChange={() => toggleAllowedValue(paramName, val)}
-																className="h-4 w-4 rounded border-gray-300"
-															/>
-															{parameterValueLabels[val] ?? val}
-														</label>
-													))}
-												</div>
-
-												<div className="space-y-1 max-w-[240px]">
-													<Label className="text-sm text-muted-foreground">
-														Default
-													</Label>
-													<Select
-														value={String(config.default ?? "text")}
-														onValueChange={(value) =>
-															updateParameterValue(paramName, "default", value)
-														}
-													>
-														<SelectTrigger className="text-[14px]">
-															<SelectValue placeholder="Select default" />
-														</SelectTrigger>
-														<SelectContent>
-															{(config.allowed ?? []).map((val) => (
-																<SelectItem key={val} value={val}>
-																	{parameterValueLabels[val] ?? val}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-											</div>
-										) : config.min !== undefined ||
-										  config.max !== undefined ||
-										  typeof config.default === "number" ? (
-											<div className="grid grid-cols-3 gap-3">
-												<div className="space-y-1">
-													<Label className="text-sm text-muted-foreground">Min</Label>
-													<Input
-														type="number"
-														value={config.min ?? 0}
-														onChange={(e) =>
-															updateParameterValue(
-																paramName,
-																"min",
-																Number(e.target.value),
-															)
-														}
-													/>
-												</div>
-												<div className="space-y-1">
-													<Label className="text-sm text-muted-foreground">Max</Label>
-													<Input
-														type="number"
-														value={config.max ?? 100}
-														onChange={(e) =>
-															updateParameterValue(
-																paramName,
-																"max",
-																Number(e.target.value),
-															)
-														}
-													/>
-												</div>
-												<div className="space-y-1">
-													<Label className="text-sm text-muted-foreground">Default</Label>
-													<Input
-														type="number"
-														value={
-															typeof config.default === "number" ? config.default : 0
-														}
-														onChange={(e) =>
-															updateParameterValue(
-																paramName,
-																"default",
-																Number(e.target.value),
-															)
-														}
-													/>
-												</div>
-											</div>
-										) : (
-											<span className="text-sm text-muted-foreground">
-												No extra settings
-											</span>
-										)}
-									</div>
-								)}
-							</div>
-						))}
-					</div>
-				</div>
-
-				<DialogFooter>
-					<Button variant="outline" onClick={() => onOpenChange(false)}>
-						Cancel
-					</Button>
-					<Button onClick={handleSave} disabled={isSaving}>
-						{isSaving ? "Saving..." : "Save Configuration"}
-					</Button>
-				</DialogFooter>
-			</DialogContent>
-		</Dialog>
 	);
 }

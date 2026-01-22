@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import ModelsSettings from "./ModelsSettings";
@@ -17,6 +18,7 @@ export default function SettingsBar({
 }: SettingsBarProps) {
 	const { promptId, isLoading, isOpenModels, validModels, setIsModelValid, toggleModels } =
 		useSettingsBar(prompt, models);
+	const [isToolsSectionVisible, setIsToolsSectionVisible] = useState(true);
 
 	if (isLoading) {
 		return (
@@ -62,13 +64,16 @@ export default function SettingsBar({
 				</button>
 
 				{isOpenModels && (
-					<div className="h-full flex flex-col gap-3">
+					<div
+						className={`h-full flex flex-col${isToolsSectionVisible ? " gap-3" : ""}`}
+					>
 						<ModelsSettings
 							prompt={prompt}
 							models={validModels}
 							promptId={promptId}
 							onValidationChange={setIsModelValid}
 							isUpdatingPromptContent={isUpdatingPromptContent}
+							onToolsSectionVisibilityChange={setIsToolsSectionVisible}
 						/>
 
 						<div className="flex flex-col gap-3">

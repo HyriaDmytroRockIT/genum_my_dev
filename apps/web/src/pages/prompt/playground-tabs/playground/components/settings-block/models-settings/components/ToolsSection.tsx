@@ -14,10 +14,12 @@ export const ToolsSection = memo(
 		toolsModalOpen,
 		setToolsModalOpen,
 		promptId,
+		showAddFunction,
 		isUpdatingModel,
 		onToolDelete,
 		onToolSave,
 	}: Omit<ToolsSectionProps, "setTools" | "selectedModelId">) => {
+		const shouldShowAddFunction = showAddFunction ?? true;
 		const handleToolClick = useCallback(
 			(idx: number) => {
 				setEditingToolIdx(idx);
@@ -50,15 +52,17 @@ export const ToolsSection = memo(
 		return (
 			<div className="flex flex-col mt-2 gap-2">
 				<span className="text-[14px] font-medium leading-none">Tools</span>
-				<Button
-					type="button"
-					variant="secondary"
-					size="sm"
-					className="w-full self-start px-1 py-1 gap-1 transition-colors"
-					onClick={() => setToolsModalOpen(true)}
-				>
-					Add Function
-				</Button>
+				{shouldShowAddFunction && (
+					<Button
+						type="button"
+						variant="secondary"
+						size="sm"
+						className="w-full self-start px-1 py-1 gap-1 transition-colors"
+						onClick={() => setToolsModalOpen(true)}
+					>
+						Add Function
+					</Button>
+				)}
 				<div className="rounded-lg bg-trasparent mt-2 flex flex-col items-center justify-center">
 					{Array.isArray(tools) && tools.length > 0 && (
 						<div className="w-full flex flex-col gap-2">

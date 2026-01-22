@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Form } from "@/components/ui/form";
 import JsonSchemaModal from "./components/ai-interface-editor/json-schema-editor/JsonSchemaModal";
@@ -15,6 +16,7 @@ const ModelsSettings = ({
 	promptId: propPromptId,
 	onValidationChange,
 	isUpdatingPromptContent,
+	onToolsSectionVisibilityChange,
 }: ModelsSettingsProps) => {
 	const {
 		form,
@@ -56,6 +58,32 @@ const ModelsSettings = ({
 		isUpdatingPromptContent,
 	});
 
+	const reasoningEffortOptions = activeModelConfig?.parameters?.reasoning_effort?.allowed || [
+		"none",
+		"minimal",
+		"low",
+		"medium",
+		"high",
+		"xhigh",
+	];
+	const toolsParam = activeModelConfig?.parameters as Record<string, unknown> | undefined;
+	const toolsEnabled =
+		typeof toolsParam?.tools === "object" &&
+		toolsParam?.tools !== null &&
+		(toolsParam.tools as { enabled?: boolean }).enabled === true;
+	const isCustomVendor =
+		activeModelConfig?.vendor === "CUSTOM_OPENAI_COMPATIBLE" ||
+		prompt?.languageModel?.vendor === "CUSTOM_OPENAI_COMPATIBLE";
+	const showAddFunction = !isCustomVendor || toolsEnabled;
+	const hasOtherParameters = Boolean(
+		activeModelConfig?.parameters &&
+			Object.keys(activeModelConfig.parameters).some((key) => key !== "tools"),
+	);
+
+	useEffect(() => {
+		onToolsSectionVisibilityChange?.(hasOtherParameters);
+	}, [onToolsSectionVisibilityChange, hasOtherParameters]);
+
 	if (!models || models.length === 0) {
 		return (
 			<div className="flex flex-col gap-2">
@@ -71,15 +99,6 @@ const ModelsSettings = ({
 			</div>
 		);
 	}
-
-	const reasoningEffortOptions = activeModelConfig?.parameters?.reasoning_effort?.allowed || [
-		"none",
-		"minimal",
-		"low",
-		"medium",
-		"high",
-		"xhigh",
-	];
 
 	return (
 		<TooltipProvider>
@@ -106,20 +125,23 @@ const ModelsSettings = ({
 							/>
 						)}
 
-						<ToolsSection
-							tools={tools}
-							editingToolIdx={editingToolIdx}
-							setEditingToolIdx={setEditingToolIdx}
-							editingTool={editingTool}
-							setEditingTool={setEditingTool}
-							toolsModalOpen={toolsModalOpen}
-							setToolsModalOpen={setToolsModalOpen}
-							promptId={promptId}
-							llmConfig={prompt?.languageModelConfig}
-							isUpdatingModel={isUpdatingModel}
-							onToolDelete={handleToolDelete}
-							onToolSave={handleToolSave}
-						/>
+						{showAddFunction && (
+							<ToolsSection
+								tools={tools}
+								editingToolIdx={editingToolIdx}
+								setEditingToolIdx={setEditingToolIdx}
+								editingTool={editingTool}
+								setEditingTool={setEditingTool}
+								toolsModalOpen={toolsModalOpen}
+								setToolsModalOpen={setToolsModalOpen}
+								promptId={promptId}
+								llmConfig={prompt?.languageModelConfig}
+								showAddFunction={showAddFunction}
+								isUpdatingModel={isUpdatingModel}
+								onToolDelete={handleToolDelete}
+								onToolSave={handleToolSave}
+							/>
+						)}
 					</div>
 
 					<div key={`${forceRenderKey}-${selectedModelId}`} className="space-y-5 mt-2">

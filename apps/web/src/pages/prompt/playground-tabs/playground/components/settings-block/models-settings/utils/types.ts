@@ -57,6 +57,7 @@ export interface ModelsSettingsProps {
 	prompt?: PromptSettings;
 	onValidationChange?: (isValid: boolean) => void;
 	isUpdatingPromptContent?: boolean;
+	onToolsSectionVisibilityChange?: (visible: boolean) => void;
 }
 
 export interface FormSliderProps {
@@ -96,6 +97,7 @@ export interface ToolsSectionProps {
 	setToolsModalOpen: (open: boolean) => void;
 	promptId?: number;
 	llmConfig?: unknown;
+	showAddFunction: boolean;
 	selectedModelId: number | null;
 	isUpdatingModel: boolean;
 	onToolDelete: (idx: number) => Promise<void>;
