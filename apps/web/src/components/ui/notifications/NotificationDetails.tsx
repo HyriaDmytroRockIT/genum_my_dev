@@ -238,10 +238,45 @@ export default function NotificationDetails() {
 												{children}
 											</a>
 										),
+										img: ({ src, alt }) => (
+											<img
+												src={src}
+												alt={alt ?? ""}
+												loading="lazy"
+												className="my-6 w-full max-w-[800px] rounded-md border border-muted-foreground/10"
+											/>
+										),
 										pre: ({ children }) => (
 											<pre className="bg-muted p-2 rounded-md overflow-x-auto text-xs mb-2 last:mb-0 break-words">
 												{children}
 											</pre>
+										),
+										table: ({ children }) => (
+											<div className="overflow-x-auto my-6">
+												<div className="inline-block w-full max-w-[800px] rounded-lg border border-muted-foreground/20">
+													<table className="w-full border-collapse text-sm">
+														{children}
+													</table>
+												</div>
+											</div>
+										),
+										thead: ({ children }) => (
+											<thead className="bg-muted/60">{children}</thead>
+										),
+										tr: ({ children }) => (
+											<tr className="border-b border-muted-foreground/20 last:border-0">
+												{children}
+											</tr>
+										),
+										th: ({ children }) => (
+											<th className="px-4 py-3 text-left font-semibold text-foreground">
+												{children}
+											</th>
+										),
+										td: ({ children }) => (
+											<td className="px-4 py-3 align-top text-foreground/90">
+												{children}
+											</td>
 										),
 									}}
 								>
