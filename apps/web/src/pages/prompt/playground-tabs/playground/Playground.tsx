@@ -12,6 +12,7 @@ import PromptDiff from "@/components/dialogs/PromptDiffDialog";
 import { InputTextArea } from "@/pages/prompt/playground-tabs/playground/components/input-textarea/InputTextArea";
 import { useSidebar } from "@/components/sidebar/sidebar";
 import { usePlaygroundController } from "@/pages/prompt/playground-tabs/playground/hooks/usePlayground";
+import { getOrgId, getProjectId } from "@/api/client";
 import FileSelectDialog from "@/components/dialogs/FileSelectDialog";
 import SelectedFilesList from "@/components/SelectedFilesList";
 import type { FileMetadata } from "@/api/files";
@@ -19,11 +20,9 @@ import { testcasesApi } from "@/api/testcases/testcases.api";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Playground() {
-	const { orgId, projectId, id } = useParams<{
-		orgId: string;
-		projectId: string;
-		id: string;
-	}>();
+	const orgId = getOrgId();
+	const projectId = getProjectId();
+	const { id } = useParams<{ id: string }>();
 	const parsedPromptId = id ? Number.parseInt(id, 10) : Number.NaN;
 	const promptId = Number.isFinite(parsedPromptId) ? parsedPromptId : undefined;
 	const [searchParams] = useSearchParams();
