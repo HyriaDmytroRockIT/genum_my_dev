@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
 import { db } from "@/database/db";
 import {
-	getProjectDetailedUsageStats,
-	getProjectDetailedUsageStatsV2,
+	getProjectUsageWithDailyStats,
 	getProjectLogs,
 	type LogDocument,
 	type PromptUsageStats,
@@ -171,7 +170,7 @@ export class ProjectController {
 		const metadata = req.genumMeta.ids;
 		const { fromDate, toDate } = ProjectUsageStatsSchema.parse(req.query);
 
-		const stats = await getProjectDetailedUsageStats(
+		const stats = await getProjectUsageWithDailyStats(
 			metadata.orgID,
 			metadata.projID,
 			fromDate,
@@ -183,32 +182,19 @@ export class ProjectController {
 			(stats.prompts || []).map((p: PromptUsageStats) => p.prompt_id),
 		);
 		const promptNames = promptNamesAll.filter((p) => usedPromptIds.has(p.id));
+		const userIds = Array.from(
+			new Set((stats.users || []).map((u) => u.user_id).filter((id) => id != null)),
+		);
+		const users = await db.users.getUsersByIDs(userIds);
+		const userNameById = new Map(users.map((u) => [u.id, u.name]));
+		const usersWithNames = (stats.users || []).map((u) => ({
+			...u,
+			user_name: userNameById.get(u.user_id) ?? null,
+		}));
 
 		res.status(200).json({
 			...stats,
-			promptNames,
-		});
-	}
-
-	public async getProjectDetailedUsageStatsV2(req: Request, res: Response) {
-		const metadata = req.genumMeta.ids;
-		const { fromDate, toDate } = ProjectUsageStatsSchema.parse(req.query);
-
-		const stats = await getProjectDetailedUsageStatsV2(
-			metadata.orgID,
-			metadata.projID,
-			fromDate,
-			toDate,
-		);
-
-		const promptNamesAll = await db.prompts.getPromptNames(metadata.projID);
-		const usedPromptIds = new Set(
-			(stats.prompts || []).map((p: PromptUsageStats) => p.prompt_id),
-		);
-		const promptNames = promptNamesAll.filter((p) => usedPromptIds.has(p.id));
-
-		res.status(200).json({
-			...stats,
+			users: usersWithNames,
 			promptNames,
 		});
 	}
