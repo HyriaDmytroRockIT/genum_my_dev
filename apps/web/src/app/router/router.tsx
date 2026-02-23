@@ -24,6 +24,7 @@ import UserProfile from "../../pages/settings/components/UserProfile";
 import OrgGeneral from "../../pages/settings/components/OrgGeneral";
 import OrgMembers from "../../pages/settings/components/OrgMembers";
 import OrgProjects from "../../pages/settings/components/OrgProjects";
+import OrgModels from "../../pages/settings/components/OrgModels";
 import OrgAIKeys from "../../pages/settings/components/OrgAIKeys/OrgAIKeys";
 import OrgAPIKeys from "../../pages/settings/components/OrgAPIKeys";
 import ProjectDetails from "../../pages/settings/components/ProjectDetails";
@@ -32,8 +33,8 @@ import ProjectAPIKeys from "../../pages/settings/components/ProjectAPIKeys";
 
 import AcceptInvitePage from "@/pages/invite/AcceptInvitePage";
 import GettingStarted from "@/pages/getting-started/GettingStarted";
-import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
+import Login from "@/pages/auth/Login";
+import Signup from "@/pages/auth/Signup";
 import { ErrorPage } from "@/pages/info-pages/ErrorPage";
 import { NotFoundPage } from "@/pages/info-pages/NotFoundPage";
 import FilesPage from "@/pages/files/FilesPage";
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
 					{ path: "org/details", element: <OrgGeneral /> },
 					{ path: "org/members", element: <OrgMembers /> },
 					{ path: "org/projects", element: <OrgProjects /> },
+					{ path: "org/models", element: <OrgModels /> },
 					{ path: "org/ai-keys", element: <OrgAIKeys /> },
 					{ path: "org/api-keys", element: <OrgAPIKeys /> },
 					{ path: "project/details", element: <ProjectDetails /> },

@@ -4,9 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAddParamsToUrl } from "@/lib/addParamsToUrl";
 import { organizationApi } from "@/api/organization";
-import { ORG_MEMBERS_QUERY_KEY } from "./hooks/useOrgMembers";
-import { ORG_INVITES_QUERY_KEY } from "./hooks/useOrgInvites";
 import { useRefetchOnWorkspaceChange } from "@/hooks/useRefetchOnWorkspaceChange";
+import { organizationKeys } from "@/query-keys/organization.keys";
 
 type MenuSection = {
 	title: string;
@@ -24,8 +23,9 @@ const MENU: MenuSection[] = [
 			{ label: "Details", to: "/settings/org/details" },
 			{ label: "Members", to: "/settings/org/members" },
 			{ label: "Projects", to: "/settings/org/projects" },
-			{ label: "LLM API Keys", to: "/settings/org/ai-keys" },
-			{ label: "API Keys", to: "/settings/org/api-keys" },
+			{ label: "AI Providers", to: "/settings/org/ai-keys" },
+			{ label: "Models", to: "/settings/org/models" },
+			{ label: "API", to: "/settings/org/api-keys" },
 		],
 	},
 	{
@@ -33,7 +33,7 @@ const MENU: MenuSection[] = [
 		items: [
 			{ label: "Details", to: "/settings/project/details" },
 			// { label: "Members", to: "/settings/project/members" },
-			{ label: "API Keys", to: "/settings/project/api-keys" },
+			{ label: "API", to: "/settings/project/api-keys" },
 		],
 	},
 ];
@@ -67,11 +67,11 @@ export default function Settings() {
 	React.useEffect(() => {
 		if (orgId) {
 			queryClient.prefetchQuery({
-				queryKey: [...ORG_MEMBERS_QUERY_KEY, orgId],
+				queryKey: organizationKeys.members(orgId),
 				queryFn: () => organizationApi.getMembers(),
 			});
 			queryClient.prefetchQuery({
-				queryKey: [...ORG_INVITES_QUERY_KEY, orgId],
+				queryKey: organizationKeys.invites(orgId),
 				queryFn: () => organizationApi.getInvites(),
 			});
 		}

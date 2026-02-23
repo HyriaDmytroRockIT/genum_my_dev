@@ -7,6 +7,7 @@ const EnvSchema = z.object({
 	NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 	CORE_PORT: z.coerce.number().int().positive(),
 	INSTANCE_TYPE: z.enum(["local", "cloud"]).default("local"),
+	AUTH_BCRYPT_ROUNDS: z.coerce.number().int().positive().default(10),
 	// Database
 	DATABASE_URL: z.url(),
 	// ClickHouse
@@ -16,6 +17,9 @@ const EnvSchema = z.object({
 	CLICKHOUSE_PASSWORD: z.string().optional(),
 	// Frontend
 	FRONTEND_URL: z.url(),
+	// Admin User
+	ADMIN_EMAIL: z.email().optional().default("admin@admin.com"),
+	ADMIN_PASSWORD: z.string().min(8).optional().default("changeme"),
 	// AI Provider
 	OPENAI_KEY: z.string().optional(),
 	ANTHROPIC_KEY: z.string().optional(),
@@ -35,9 +39,7 @@ const EnvSchema = z.object({
 	// Hooks
 	WEBHOOK_USERNAME: z.string().optional().default(""),
 	WEBHOOK_PASSWORD: z.string().optional().default(""),
-	WEBHOOK_EMAIL_URL: z.url().optional().default(""),
-	WEBHOOK_FEEDBACK_URL: z.url().optional().default(""),
-	WEBHOOK_NEW_USER_URL: z.url().optional().default(""),
+	WEBHOOK_URL: z.url().optional().default(""),
 	// S3 Storage
 	S3_BUCKET: z.string().optional().default("genum"),
 	S3_REGION: z.string().optional().default("us-east-1"), // default region for local MinIO

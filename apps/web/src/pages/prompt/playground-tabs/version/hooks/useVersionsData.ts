@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { promptApi } from "@/api/prompt";
-import type { Branch, BranchesResponse } from "../utils/types";
+import type { BranchesResponse } from "../utils/types";
+import { versionKeys } from "@/query-keys/version.keys";
 
 const SYSTEM_AUTHOR = {
 	id: 0,
@@ -10,56 +11,50 @@ const SYSTEM_AUTHOR = {
 };
 
 export const useVersionsData = (id: string | undefined) => {
-	const [data, setData] = useState<{ branches: Branch[] } | null>(null);
-	const [isLoading, setIsLoading] = useState(false);
-	const [isCommitted, setIsCommitted] = useState(false);
+	const queryClient = useQueryClient();
 
-	const fetchBranches = useCallback(async () => {
-		if (!id) return;
-		setIsLoading(true);
-		try {
+	const branchesQuery = useQuery({
+		queryKey: versionKeys.versions(id),
+		queryFn: async () => {
+			if (!id) throw new Error("No id");
 			const result = await promptApi.getBranches(id);
-			const transformed = {
-				branches: result.branches.map((branch: any) => ({
+			return {
+				branches: result.branches.map((branch) => ({
 					...branch,
-					promptVersions: branch.promptVersions.map((version: any) => ({
+					promptVersions: branch.promptVersions.map((version) => ({
 						...version,
 						author: version.author || SYSTEM_AUTHOR,
 					})),
 				})),
 			} as BranchesResponse;
-			setData(transformed);
-		} catch (error) {
-			console.error("Error fetching branches:", error);
-		} finally {
-			setIsLoading(false);
-		}
-	}, [id]);
+		},
+		enabled: Boolean(id),
+	});
 
-	const fetchPrompt = useCallback(async () => {
-		if (!id) return;
-		try {
+	const promptQuery = useQuery({
+		queryKey: versionKeys.committed(id),
+		queryFn: async () => {
+			if (!id) throw new Error("No id");
 			const result = await promptApi.getPrompt(id);
-			if (result?.prompt?.commited !== undefined) {
-				setIsCommitted(result.prompt.commited);
-			}
-		} catch (error) {
-			console.error("Error fetching prompt:", error);
-		}
-	}, [id]);
+			return result?.prompt?.commited ?? false;
+		},
+		enabled: Boolean(id),
+	});
 
-	const refresh = useCallback(() => {
-		fetchBranches();
-		fetchPrompt();
-	}, [fetchBranches, fetchPrompt]);
+	const refresh = () => {
+		if (!id) return;
+		queryClient.invalidateQueries({ queryKey: versionKeys.versions(id) });
+		queryClient.invalidateQueries({ queryKey: versionKeys.committed(id) });
+	};
 
-	useEffect(() => {
-		refresh();
-	}, [refresh]);
+	const isCommitted = promptQuery.data ?? false;
+	const setIsCommitted = (value: boolean) => {
+		queryClient.setQueryData(versionKeys.committed(id), value);
+	};
 
 	return {
-		data,
-		isLoading,
+		data: branchesQuery.data ?? null,
+		isLoading: branchesQuery.isLoading,
 		isCommitted,
 		setIsCommitted,
 		refresh,

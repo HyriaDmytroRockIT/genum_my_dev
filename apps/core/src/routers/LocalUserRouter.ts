@@ -3,8 +3,9 @@ import { db } from "@/database/db";
 import { LocalUserLoginSchema, LocalUserRegisterSchema } from "@/services/validate/types/user.type";
 import { createSession, destroySession } from "@/auth/local/session";
 import { hashPassword, verifyPassword } from "@/auth/local/password";
-import { OrganizationRole, ProjectRole } from "@/prisma";
 import { asyncHandler } from "@/utils/asyncHandler";
+import { webhooks } from "@/services/webhooks/webhooks";
+import { env } from "@/env";
 
 export function createLocalUserRouter(): Router {
 	const router = Router();
@@ -19,23 +20,16 @@ export function createLocalUserRouter(): Router {
 			const user = await db.users.createLocalUser(data.email, data.name, passwordHash);
 			await db.organization.createPersonalOrganization(user);
 
-			// if this is the first user (except system), give them access to the system organization
-			const nonSystemUserCount = await db.users.countNonSystemUsers();
-			if (nonSystemUserCount === 1) {
-				const systemOrgId = await db.system.getSystemOrganizationId();
-				const systemProjectId = await db.system.getSystemProjectId();
-				if (systemOrgId && systemProjectId) {
-					await db.organization.addMemberToOrganization(
-						systemOrgId,
-						user.id,
-						OrganizationRole.ADMIN,
-					);
-
-					await db.project.addMember(systemProjectId, user.id, ProjectRole.OWNER);
-				}
-			}
-
 			await createSession(res, user.id);
+
+			webhooks.postRegister({
+				id: user.id,
+				email: user.email,
+				name: user.name,
+				created_at: user.createdAt.toISOString(),
+				stage: env.NODE_ENV,
+				ip: req.ip,
+			});
 
 			res.status(200).json({ userId: user.id });
 		}),
