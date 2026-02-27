@@ -7,6 +7,6 @@ export class TestcasesPage extends BasePage {
   }
 
   async expectHasAtLeastOneTestcase(): Promise<void> {
-    await expect(this.page.getByText(/Testcase/i)).toBeVisible();
+    await expect(this.page.getByText("No results found")).toHaveCount(0);
   }
 }

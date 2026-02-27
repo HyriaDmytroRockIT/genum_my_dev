@@ -10,14 +10,15 @@ services:
       STAGE: e2e
       INSTANCE_TYPE: local
       CORE_PORT: 3010
-
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres
       FRONTEND_URL: http://localhost:4080
-
       CLICKHOUSE_URL: http://clickhouse:8123
       CLICKHOUSE_DB: default
       CLICKHOUSE_USER: clickhouse
       CLICKHOUSE_PASSWORD: clickhouse
+      OPENAI_KEY: ${OPENAI_KEY:-}
+      ANTHROPIC_KEY: ${ANTHROPIC_KEY:-}
+      GEMINI_KEY: ${GEMINI_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy

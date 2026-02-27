@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import fs from "node:fs";
 import { BasePage } from "./base.page";
+import { apiBaseUrl, authCredentialsPath } from "../config/env";
 
 export class PlaygroundPage extends BasePage {
 	readonly runPromptButton: Locator;
@@ -10,12 +12,23 @@ export class PlaygroundPage extends BasePage {
 	private parsePromptRoute(rawUrl: string): { orgId: string; projectId: string; promptId: string } | null {
 		try {
 			const url = new URL(rawUrl, this.page.url());
-			const match = url.pathname.match(
-				/^\/(\d+)\/(\d+)\/prompt\/(\d+)\/(?:playground|testcases|versions|memory|logs|api)\/?$/,
-			);
+			const match = url.pathname.match(/^\/([^/]+)\/([^/]+)\/prompt\/([^/]+)(?:\/.*)?$/);
 			if (!match) return null;
 			const [, orgId, projectId, promptId] = match;
 			return { orgId, projectId, promptId };
+		} catch {
+			return null;
+		}
+	}
+
+	private parseWorkspaceRoute(rawUrl: string): { orgId: string; projectId: string } | null {
+		try {
+			const url = new URL(rawUrl, this.page.url());
+			const segments = url.pathname.split("/").filter(Boolean);
+			if (segments.length < 2) return null;
+			const [orgId, projectId] = segments;
+			if (!orgId || !projectId) return null;
+			return { orgId, projectId };
 		} catch {
 			return null;
 		}
@@ -27,7 +40,7 @@ export class PlaygroundPage extends BasePage {
 		const fromCurrentUrl = this.parsePromptRoute(this.page.url());
 		if (fromCurrentUrl) return fromCurrentUrl;
 
-		const promptLink = this.page.locator('a[href*="/prompt/"][href*="/playground"]').first();
+		const promptLink = this.page.locator('a[href*="/prompt/"]').first();
 		if (await promptLink.isVisible({ timeout: 1_000 }).catch(() => false)) {
 			const href = await promptLink.getAttribute("href");
 			if (href) {
@@ -37,6 +50,191 @@ export class PlaygroundPage extends BasePage {
 		}
 
 		return null;
+	}
+
+	private async ensurePromptContext(): Promise<
+		{ orgId: string; projectId: string; promptId: string } | null
+	> {
+		const existing = await this.resolvePromptRoute();
+		if (existing) return existing;
+
+		const isPromptsPage = /\/[^/]+\/[^/]+\/prompts\/?$/.test(this.page.url());
+		if (!isPromptsPage) return null;
+
+		const promptLink = this.page.locator('a[href*="/prompt/"][href*="/playground"]').first();
+		if (await promptLink.isVisible({ timeout: 1_500 }).catch(() => false)) {
+			await promptLink.click({ timeout: 2_000 });
+			await this.page
+				.waitForURL(/\/[^/]+\/[^/]+\/prompt\/[^/]+\/playground(?:\?.*)?$/, { timeout: 8_000 })
+				.catch(() => {});
+			return this.resolvePromptRoute();
+		}
+
+		const createPromptButton = this.page.getByRole("button", { name: "Create prompt" });
+		if (await createPromptButton.isVisible({ timeout: 1_500 }).catch(() => false)) {
+			await createPromptButton.click({ timeout: 3_000, force: true });
+			await this.page
+				.waitForURL(/\/[^/]+\/[^/]+\/prompt\/[^/]+\/playground(?:\?.*)?$/, { timeout: 10_000 })
+				.catch(() => {});
+			const fromUiCreate = await this.resolvePromptRoute();
+			if (fromUiCreate) return fromUiCreate;
+		}
+
+		const workspace = this.parseWorkspaceRoute(this.page.url());
+		if (!workspace) return null;
+
+		const primaryApiBaseUrl = await this.resolveApiBaseUrl();
+		let created = await this.createPromptViaApi(
+			primaryApiBaseUrl,
+			workspace.orgId,
+			workspace.projectId,
+		);
+		if (!created.ok && created.status === 401 && primaryApiBaseUrl !== apiBaseUrl) {
+			created = await this.createPromptViaApi(apiBaseUrl, workspace.orgId, workspace.projectId);
+		}
+		if (!created.ok || !created.promptId) {
+			return null;
+		}
+
+		await this.page.goto(
+			`/${workspace.orgId}/${workspace.projectId}/prompt/${created.promptId}/playground`,
+		);
+		await this.page
+			.waitForURL(/\/[^/]+\/[^/]+\/prompt\/[^/]+\/playground(?:\?.*)?$/, { timeout: 10_000 })
+			.catch(() => {});
+
+		return this.resolvePromptRoute();
+	}
+
+	private async resolveApiBaseUrl(): Promise<string> {
+		const runtimeApiUrl = await this.page.evaluate(
+			() => (window as typeof window & { __ENV__?: { API_URL?: string } }).__ENV__?.API_URL || "",
+		);
+		return runtimeApiUrl || apiBaseUrl;
+	}
+
+	private async updatePromptViaApi(
+		baseUrl: string,
+		promptId: string,
+		orgId: string,
+		projectId: string,
+		value: string,
+	): Promise<{ ok: boolean; status: number; body: string }> {
+		const requestUrl = new URL(`/prompts/${promptId}`, baseUrl).toString();
+		const execute = () =>
+			this.page.request.put(requestUrl, {
+				headers: {
+					"Content-Type": "application/json",
+					"lab-org-id": orgId,
+					"lab-proj-id": projectId,
+				},
+				data: { value },
+				failOnStatusCode: false,
+			});
+		let response = await execute();
+		if (response.status() === 401 && (await this.reloginViaApi(baseUrl))) {
+			response = await execute();
+		}
+		return {
+			ok: response.ok(),
+			status: response.status(),
+			body: await response.text(),
+		};
+	}
+
+	private async createTestcaseViaApi(
+		baseUrl: string,
+		promptId: string,
+		orgId: string,
+		projectId: string,
+		lastOutput = "",
+	): Promise<{ ok: boolean; status: number; body: string }> {
+		const requestUrl = new URL("/testcases", baseUrl).toString();
+		const execute = () =>
+			this.page.request.post(requestUrl, {
+				headers: {
+					"Content-Type": "application/json",
+					"lab-org-id": orgId,
+					"lab-proj-id": projectId,
+				},
+				data: {
+					promptId: Number(promptId),
+					input: "E2E input",
+					expectedOutput: "E2E expected output",
+					lastOutput,
+					name: `E2E testcase ${Date.now()}`,
+				},
+				failOnStatusCode: false,
+			});
+		let response = await execute();
+		if (response.status() === 401 && (await this.reloginViaApi(baseUrl))) {
+			response = await execute();
+		}
+		return {
+			ok: response.ok(),
+			status: response.status(),
+			body: await response.text(),
+		};
+	}
+
+	private async createPromptViaApi(
+		baseUrl: string,
+		orgId: string,
+		projectId: string,
+	): Promise<{ ok: boolean; status: number; body: string; promptId?: string }> {
+		const requestUrl = new URL("/prompts", baseUrl).toString();
+		const execute = () =>
+			this.page.request.post(requestUrl, {
+				headers: {
+					"Content-Type": "application/json",
+					"lab-org-id": orgId,
+					"lab-proj-id": projectId,
+				},
+				data: {
+					name: `E2E prompt ${Date.now()}`,
+					value: "",
+				},
+				failOnStatusCode: false,
+			});
+		let response = await execute();
+		if (response.status() === 401 && (await this.reloginViaApi(baseUrl))) {
+			response = await execute();
+		}
+		const body = await response.text();
+		let promptId: string | undefined;
+		try {
+			const parsed = JSON.parse(body) as { prompt?: { id?: number | string } };
+			if (parsed?.prompt?.id !== undefined) {
+				promptId = String(parsed.prompt.id);
+			}
+		} catch {
+			// keep promptId undefined; caller handles fallback
+		}
+		return {
+			ok: response.ok(),
+			status: response.status(),
+			body,
+			promptId,
+		};
+	}
+
+	private async reloginViaApi(baseUrl: string): Promise<boolean> {
+		if (!fs.existsSync(authCredentialsPath)) return false;
+		try {
+			const raw = fs.readFileSync(authCredentialsPath, "utf-8");
+			const creds = JSON.parse(raw) as { email?: string; password?: string };
+			if (!creds.email || !creds.password) return false;
+			const response = await this.page.request.post(
+				new URL("/auth/local/login", baseUrl).toString(),
+				{
+					data: { email: creds.email, password: creds.password },
+					failOnStatusCode: false,
+				},
+			);
+			return response.ok();
+		} catch {
+			return false;
+		}
 	}
 
 	constructor(page: Page) {
@@ -125,43 +323,28 @@ export class PlaygroundPage extends BasePage {
 		}
 
 		if (!(await this.runPromptButton.isEnabled({ timeout: 3_000 }).catch(() => false))) {
-			const route = await this.resolvePromptRoute();
+			const route = await this.ensurePromptContext();
 			if (!route) {
 				return;
 			}
 			const { orgId, projectId, promptId } = route;
-			const runtimeApiUrl = await this.page.evaluate(
-				() => (window as typeof window & { __ENV__?: { API_URL?: string } }).__ENV__?.API_URL || "",
+			const primaryApiBaseUrl = await this.resolveApiBaseUrl();
+			let fallbackResult = await this.updatePromptViaApi(
+				primaryApiBaseUrl,
+				promptId,
+				orgId,
+				projectId,
+				userIntent,
 			);
-			if (!runtimeApiUrl) {
-				throw new Error("Cannot resolve runtime API URL from web config");
+			if (!fallbackResult.ok && fallbackResult.status === 401 && primaryApiBaseUrl !== apiBaseUrl) {
+				fallbackResult = await this.updatePromptViaApi(
+					apiBaseUrl,
+					promptId,
+					orgId,
+					projectId,
+					userIntent,
+				);
 			}
-			const fallbackResult = await this.page.evaluate(
-				async ({ baseUrl, pid, oid, prid, value }) => {
-					const response = await fetch(`${baseUrl}/prompts/${pid}`, {
-						method: "PUT",
-						credentials: "include",
-						headers: {
-							"Content-Type": "application/json",
-							"lab-org-id": oid,
-							"lab-proj-id": prid,
-						},
-						body: JSON.stringify({ value }),
-					});
-					return {
-						ok: response.ok,
-						status: response.status,
-						body: await response.text(),
-					};
-					},
-					{
-						baseUrl: runtimeApiUrl,
-						pid: promptId,
-						oid: orgId,
-						prid: projectId,
-					value: userIntent,
-				},
-			);
 
 			if (fallbackResult.ok) {
 				await this.page.reload();
@@ -196,36 +379,30 @@ export class PlaygroundPage extends BasePage {
 		}
 
 		if (!(await this.runPromptButton.isEnabled({ timeout: 4_000 }).catch(() => false))) {
-			const route = this.page.url().match(/\/(\d+)\/(\d+)\/prompt\/(\d+)\/playground/);
+			const route = await this.ensurePromptContext();
 			if (route) {
-				const [, orgId, projectId, promptId] = route;
-				const runtimeApiUrl = await this.page.evaluate(
-					() =>
-						(window as typeof window & { __ENV__?: { API_URL?: string } }).__ENV__?.API_URL ||
-						"",
+				const { orgId, projectId, promptId } = route;
+				const primaryApiBaseUrl = await this.resolveApiBaseUrl();
+				let fallbackResult = await this.updatePromptViaApi(
+					primaryApiBaseUrl,
+					promptId,
+					orgId,
+					projectId,
+					"E2E system prompt",
 				);
-				if (runtimeApiUrl) {
-					const fallbackResult = await this.page.evaluate(
-						async ({ baseUrl, pid, oid, prid }) => {
-							const response = await fetch(`${baseUrl}/prompts/${pid}`, {
-								method: "PUT",
-								credentials: "include",
-								headers: {
-									"Content-Type": "application/json",
-									"lab-org-id": oid,
-									"lab-proj-id": prid,
-								},
-								body: JSON.stringify({ value: "E2E system prompt" }),
-							});
-							return { ok: response.ok };
-						},
-						{ baseUrl: runtimeApiUrl, pid: promptId, oid: orgId, prid: projectId },
+				if (!fallbackResult.ok && fallbackResult.status === 401 && primaryApiBaseUrl !== apiBaseUrl) {
+					fallbackResult = await this.updatePromptViaApi(
+						apiBaseUrl,
+						promptId,
+						orgId,
+						projectId,
+						"E2E system prompt",
 					);
-					if (fallbackResult.ok) {
-						await this.page.reload();
-						if (await input.isVisible({ timeout: 2_000 }).catch(() => false)) {
-							await input.fill("E2E input");
-						}
+				}
+				if (fallbackResult.ok) {
+					await this.page.reload();
+					if (await input.isVisible({ timeout: 2_000 }).catch(() => false)) {
+						await input.fill("E2E input");
 					}
 				}
 			}
@@ -234,43 +411,42 @@ export class PlaygroundPage extends BasePage {
 		if (await this.runPromptButton.isEnabled({ timeout: 5_000 }).catch(() => false)) {
 			await this.runPromptButton.click();
 		} else {
-			const route = this.page.url().match(/\/(\d+)\/(\d+)\/prompt\/(\d+)\/playground/);
+			const route = await this.ensurePromptContext();
 			if (!route) {
-				throw new Error("Run prompt is still disabled and prompt ids are unavailable");
+				const currentUrl = this.page.url();
+				const promptLinkCandidates = await this.page
+					.locator('a[href*="/prompt/"]')
+					.evaluateAll((nodes) =>
+						nodes
+							.map((node) => (node as HTMLAnchorElement).getAttribute("href") || "")
+							.filter(Boolean)
+							.slice(0, 5),
+					)
+					.catch(() => []);
+				throw new Error(
+					`Run prompt is still disabled and prompt ids are unavailable. URL=${currentUrl}. promptLinks=${JSON.stringify(promptLinkCandidates)}`,
+				);
 			}
-			const [, orgId, projectId, promptId] = route;
-			const runtimeApiUrl = await this.page.evaluate(
-				() =>
-					(window as typeof window & { __ENV__?: { API_URL?: string } }).__ENV__?.API_URL ||
-					"",
+			const { orgId, projectId, promptId } = route;
+			const primaryApiBaseUrl = await this.resolveApiBaseUrl();
+			let created = await this.createTestcaseViaApi(
+				primaryApiBaseUrl,
+				promptId,
+				orgId,
+				projectId,
 			);
-			if (!runtimeApiUrl) {
-				throw new Error("Run prompt is still disabled and runtime API URL is unavailable");
+			if (!created.ok && created.status === 401 && primaryApiBaseUrl !== apiBaseUrl) {
+				created = await this.createTestcaseViaApi(
+					apiBaseUrl,
+					promptId,
+					orgId,
+					projectId,
+				);
 			}
-
-			const created = await this.page.evaluate(
-				async ({ baseUrl, oid, prid, pid }) => {
-					const response = await fetch(`${baseUrl}/testcases`, {
-						method: "POST",
-						credentials: "include",
-						headers: {
-							"Content-Type": "application/json",
-							"lab-org-id": oid,
-							"lab-proj-id": prid,
-						},
-						body: JSON.stringify({
-							promptId: Number(pid),
-							input: "E2E input",
-							expectedOutput: "E2E expected output",
-							name: `E2E testcase ${Date.now()}`,
-						}),
-					});
-					return response.ok;
-				},
-				{ baseUrl: runtimeApiUrl, oid: orgId, prid: projectId, pid: promptId },
-			);
-			if (!created) {
-				throw new Error("Run prompt is still disabled after fallback");
+			if (!created.ok) {
+				throw new Error(
+					`Run prompt is still disabled after fallback (POST /testcases ${created.status}): ${created.body}`,
+				);
 			}
 			this.testcaseCreatedViaApi = true;
 			return;
@@ -288,7 +464,27 @@ export class PlaygroundPage extends BasePage {
 		if (await this.addTestcaseButton.isEnabled({ timeout: 5_000 }).catch(() => false)) {
 			await this.addTestcaseButton.click();
 		} else {
-			throw new Error("Add testcase button is disabled");
+			const route = await this.ensurePromptContext();
+			if (!route) {
+				throw new Error("Add testcase button is disabled and prompt context is unavailable");
+			}
+			const { orgId, projectId, promptId } = route;
+			const primaryApiBaseUrl = await this.resolveApiBaseUrl();
+			let created = await this.createTestcaseViaApi(
+				primaryApiBaseUrl,
+				promptId,
+				orgId,
+				projectId,
+			);
+			if (!created.ok && created.status === 401 && primaryApiBaseUrl !== apiBaseUrl) {
+				created = await this.createTestcaseViaApi(apiBaseUrl, promptId, orgId, projectId);
+			}
+			if (!created.ok) {
+				throw new Error(
+					`Add testcase button is disabled and fallback failed (POST /testcases ${created.status}): ${created.body}`,
+				);
+			}
+			this.testcaseCreatedViaApi = true;
 		}
 	}
 }

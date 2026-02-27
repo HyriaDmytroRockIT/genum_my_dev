@@ -29,7 +29,7 @@ loadEnvFile(".env.e2e", true);
 const isCI = Boolean(process.env.CI);
 const webBaseUrl =
   process.env.E2E_WEB_URL ??
-  (process.env.E2E === "true" ? "http://127.0.0.1:4080" : "http://127.0.0.1:3080");
+  (process.env.E2E === "true" ? "http://localhost:4080" : "http://localhost:3080");
 const authStatePath = "e2e/.auth/state.json";
 
 export default defineConfig({

@@ -8,9 +8,9 @@ export class LayoutPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.navGettingStarted = page.getByRole("link", { name: "Getting Started" });
-    this.navPrompts = page.getByRole("link", { name: "Prompts" });
-    this.navTestcases = page.getByRole("link", { name: "Testcases" });
+    this.navGettingStarted = page.locator('a[data-sidebar="menu-button"]', { hasText: "Getting Started" });
+    this.navPrompts = page.locator('a[data-sidebar="menu-button"]', { hasText: "Prompts" });
+    this.navTestcases = page.locator('a[data-sidebar="menu-button"]', { hasText: "Testcases" });
   }
 
   async openHome(): Promise<void> {

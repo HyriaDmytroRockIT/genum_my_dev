@@ -43,8 +43,8 @@ E2E=true pnpm exec playwright test
 
 Optional overrides:
 
-- `E2E_WEB_URL` (default: `http://127.0.0.1:3080` or `4080` in E2E mode)
-- `E2E_API_URL` (default: `http://127.0.0.1:3010` or `4010` in E2E mode)
+- `E2E_WEB_URL` (default: `http://localhost:3080` or `4080` in E2E mode)
+- `E2E_API_URL` (default: `http://localhost:3010` or `4010` in E2E mode)
 
 ## Conventions For New Tests
 
