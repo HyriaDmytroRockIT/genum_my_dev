@@ -49,9 +49,9 @@ export default defineConfig({
 	use: {
 		baseURL: webBaseUrl,
 		headless: true,
-		trace: "on",
-		video: "retain-on-failure",
-		screenshot: "on",
+		trace: "retain-on-failure",
+		video: "on",
+		screenshot: "off",
 	},
 
 	projects: [
