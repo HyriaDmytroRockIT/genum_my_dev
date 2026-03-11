@@ -198,4 +198,217 @@ function PlaygroundSettingsSkeleton() {
 	);
 }
 
-export { PlaygroundMainSkeleton, PlaygroundSettingsSkeleton, ModelsSettingsControlsSkeleton };
+function TestcasesTableSkeleton() {
+	const rowSkeletonKeys = [
+		"testcase-row-1",
+		"testcase-row-2",
+		"testcase-row-3",
+		"testcase-row-4",
+		"testcase-row-5",
+		"testcase-row-6",
+	];
+
+	return (
+		<div className="overflow-hidden rounded-md">
+			<div className="flex h-[54px] items-center bg-[#F4F4F5] px-[14px] dark:bg-[#262626]">
+				<div className="grid w-full grid-cols-[2.8fr_1.6fr_1fr_1fr_0.8fr] gap-4">
+					<Skeleton className="h-4 w-[58px]" />
+					<Skeleton className="h-4 w-[78px]" />
+					<Skeleton className="h-4 w-[42px] justify-self-center" />
+					<Skeleton className="h-4 w-[50px] justify-self-center" />
+					<Skeleton className="h-4 w-[46px] justify-self-end" />
+				</div>
+			</div>
+			<div className="divide-y">
+				{rowSkeletonKeys.map((rowKey) => (
+					<div
+						key={rowKey}
+						className="grid grid-cols-[2.8fr_1.6fr_1fr_1fr_0.8fr] gap-4 px-[14px] py-4"
+					>
+						<div className="space-y-2">
+							<Skeleton className="h-4 w-[70%]" />
+							<Skeleton className="h-3 w-[45%]" />
+						</div>
+						<Skeleton className="h-4 w-[78%] self-center" />
+						<Skeleton className="h-6 w-16 justify-self-center rounded-full" />
+						<Skeleton className="h-4 w-20 justify-self-center self-center" />
+						<Skeleton className="h-8 w-8 justify-self-end rounded-md" />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function VersionsBranchesSkeleton() {
+	const groupKeys = ["versions-group-1", "versions-group-2"];
+
+	return (
+		<div className="p-1 py-4">
+			{groupKeys.map((groupKey, groupIndex) => {
+				const isLastGroup = groupIndex === groupKeys.length - 1;
+
+				return (
+					<div key={groupKey} className="relative">
+						<div className="flex justify-between">
+							<div className="flex items-center gap-2">
+								<Skeleton className="h-7 w-7 rounded-md" />
+								<Skeleton className="h-4 w-36" />
+							</div>
+
+							{groupIndex < 1 && (
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-2">
+										<span className="w-7" />
+										<span />
+									</div>
+									<div className="flex gap-2 text-sm text-muted-foreground">
+										<Skeleton className="h-5 w-20" />
+									</div>
+								</div>
+							)}
+						</div>
+
+						<div
+							className={`ml-3 border-l-2 border-border pl-4 py-3 ${isLastGroup ? "pb-0" : "pb-4"}`}
+						>
+							<div
+								key={`${groupKey}-commit`}
+								className="relative flex items-start gap-4 border-b border-border py-3 pl-4"
+							>
+								<Skeleton className="h-8 w-8 rounded-md" />
+
+								<div className="flex-1">
+									<div className="flex items-center justify-between">
+										<div className="w-full space-y-2">
+											<Skeleton className="h-4 w-[42%]" />
+											<Skeleton className="h-4 w-[30%]" />
+										</div>
+
+										<div className="flex items-center gap-4">
+											<Skeleton className="h-6 w-24 rounded" />
+											<Skeleton className="h-6 w-20 rounded-sm" />
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+function MemoryTableSkeleton() {
+	const rowSkeletonKeys = [
+		"memory-row-1",
+		"memory-row-2",
+		"memory-row-3",
+		"memory-row-4",
+		"memory-row-5",
+		"memory-row-6",
+	];
+
+	return (
+		<div className="overflow-hidden rounded-md">
+			<div className="grid h-[54px] grid-cols-[1.3fr_2.2fr_1fr_1fr_0.7fr] items-center gap-4 bg-muted px-[14px] text-sm font-medium leading-5 text-muted-foreground">
+				<Skeleton className="h-4 w-8" />
+				<Skeleton className="h-4 w-10" />
+				<Skeleton className="h-4 w-14" />
+				<Skeleton className="h-4 w-14" />
+				<Skeleton className="h-4 w-12 justify-self-center" />
+			</div>
+
+			<div className="divide-y">
+				{rowSkeletonKeys.map((rowKey) => (
+					<div
+						key={rowKey}
+						className="grid grid-cols-[1.3fr_2.2fr_1fr_1fr_0.7fr] gap-4 px-[14px] py-4"
+					>
+						<Skeleton className="h-4 w-[68%] self-center" />
+						<Skeleton className="h-4 w-[84%] self-center" />
+						<Skeleton className="h-4 w-20 self-center" />
+						<Skeleton className="h-4 w-20 self-center" />
+						<Skeleton className="h-8 w-8 justify-self-center rounded-md" />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function LogsTableSkeleton() {
+	const headerWidths = [
+		"w-8",
+		"w-24",
+		"w-12",
+		"w-12",
+		"w-20",
+		"w-16",
+		"w-14",
+		"w-16",
+		"w-16",
+	];
+	const headerSkeletonKeys = [
+		"logs-header-select",
+		"logs-header-time",
+		"logs-header-input",
+		"logs-header-output",
+		"logs-header-model",
+		"logs-header-status",
+		"logs-header-cost",
+		"logs-header-prompt-tokens",
+		"logs-header-total-tokens",
+	];
+	const rowSkeletonKeys = [
+		"log-row-1",
+		"log-row-2",
+		"log-row-3",
+		"log-row-4",
+		"log-row-5",
+		"log-row-6",
+	];
+
+	return (
+		<div className="overflow-hidden bg-card text-card-foreground">
+			<div className="grid h-[52.5px] grid-cols-[48px_180px_1fr_1fr_180px_120px_110px_110px_110px] items-center gap-3 bg-muted px-3">
+				{headerWidths.map((width, index) => (
+					<Skeleton
+						key={headerSkeletonKeys[index]}
+						className={`h-4 ${width} justify-self-center`}
+					/>
+				))}
+			</div>
+
+			<div className="divide-y divide-border">
+				{rowSkeletonKeys.map((rowKey) => (
+					<div
+						key={rowKey}
+						className="grid grid-cols-[48px_180px_1fr_1fr_180px_120px_110px_110px_110px] items-center gap-3 px-3 py-3"
+					>
+						<Skeleton className="h-4 w-4 justify-self-center rounded-full" />
+						<Skeleton className="h-4 w-28 justify-self-center" />
+						<Skeleton className="hidden h-4 w-14 justify-self-center lg:block" />
+						<Skeleton className="hidden h-4 w-16 justify-self-center lg:block" />
+						<Skeleton className="h-4 w-24 justify-self-center" />
+						<Skeleton className="hidden h-4 w-14 justify-self-center xl:block" />
+						<Skeleton className="hidden h-4 w-16 justify-self-center md:block" />
+						<Skeleton className="hidden h-4 w-14 justify-self-center sm:block" />
+						<Skeleton className="hidden h-4 w-16 justify-self-center sm:block" />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+export {
+	PlaygroundMainSkeleton,
+	PlaygroundSettingsSkeleton,
+	ModelsSettingsControlsSkeleton,
+	TestcasesTableSkeleton,
+	VersionsBranchesSkeleton,
+	MemoryTableSkeleton,
+	LogsTableSkeleton,
+};
